@@ -68,12 +68,16 @@ class RLStrategy(CtaTemplate):
         self.act = self.agent.act
         self.device = self.agent.device
         ##use for default 
-        self.balance = 0.0
-        self.frozen = 0.0 
-        self.available = 0.0 
-        self.hold_pos = 0.0 
-        self.pos_avgprice = 0.0 
-        self.pnl = 0.0 
+        self.balance = 1e-3
+        self.frozen = 1e-3
+        self.available = 1e-3
+        self.hold_pos = 0
+        self.pos_avgprice = 1e-3
+        self.pnl = 1e-3
+        self.last_price = 1e-3
+        self.account_ready = False
+        self.position_ready = False 
+
 
         ##初始化数据
         self.observer = Observer(self.state_dim,self.windows_size)
@@ -81,18 +85,19 @@ class RLStrategy(CtaTemplate):
         self.am = BarDataFeed(500)
         
     def on_init(self):
+        ##load bar to am 
         self.pricetick = self.get_pricetick()
         self.min_volume = self.get_min_volume()
+        self.load_bar(1)
+        self.last_price = self.am.close[-1] 
     def on_start(self):
-        pass  
+        pass 
             
     def on_stop(self):
         pass
     def on_tick(self, tick: TickData):
-        ##不依赖于polifo的计算，直接从交易所获得数据
-        ##实时更新pos_info 和资产 
-        self.last_price = tick.last_price   
-
+        self.bg.update_tick(tick)
+        self.last_price = tick.last_price 
     def on_bar(self, bar: BarData):
 
         am = self.am
@@ -100,6 +105,10 @@ class RLStrategy(CtaTemplate):
         if not am.inited:
             return
 
+        if not self.account_ready:
+            return
+        if not self.position_ready:
+            return
         ## update Pos Info 
         self.active_orders = self.get_active_orders() 
         frozen_occupy_margin = sum([order.price * abs(order.volume) * self.start_margin_rate for order in self.active_orders])
@@ -139,20 +148,25 @@ class RLStrategy(CtaTemplate):
         pass
 
     def on_account(self,account):  
+            
         self.account = account
 
         if account.accountid == "USDT":
+            self.account_ready = True 
             self.balance = account.balance  ##所有资金
             self.frozen =  account.frozen   ##维系保证金 
 
     def on_position(self, position):
+
+        if position:
+            self.position_ready = True 
         self.position = position 
         self.hold_pos = position.volume 
         self.pnl = position.pnl 
         if abs(self.hold_pos) <self.min_volume:
             self.pos_avgprice = self.last_price
         else:
-            self.pos_avgprice = position.price  
+            self.pos_avgprice = position.price
 
     def create_order(self,action):
         direction = None
@@ -194,6 +208,7 @@ class RLStrategy(CtaTemplate):
             trade_balance = self.available*self.limit_order_margin_rate * trade_ptr
             self.min_trade_in_gateway= self.min_volume * self.last_price /self.MarginLevel 
             trade_price = round_to(self.last_price,self.pricetick)
+            
             trade_volume = round_to(trade_balance * self.MarginLevel /trade_price,self.min_volume)
             if trade_balance < self.min_trade_in_gateway:
                 return None 
@@ -205,7 +220,16 @@ class RLStrategy(CtaTemplate):
             if trade_volume < self.min_volume:
                 #self.output("trade volume is not enough to  close a order")
                 return None 
-
+        if offset == Offset.OPEN:
+            if direction == Direction.LONG:
+                self.write_log("开多:{},价格:{}".format(trade_volume,trade_price))
+            else:
+                self.write_log("开空:{},价格:{}".format(trade_volume,trade_price))
+        elif offset == Offset.CLOSE:
+            if direction == Direction.SHORT:
+                self.write_log("平多:{},价格:{}".format(trade_volume,trade_price))
+            else:
+                self.write_log("平空:{},价格:{}".format(trade_volume,trade_price))
 
         return self.send_order(
             direction,
@@ -213,6 +237,5 @@ class RLStrategy(CtaTemplate):
             trade_price,
             abs(trade_volume),
             False,
-            False,
-            False 
+            False
         )

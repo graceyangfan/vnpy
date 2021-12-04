@@ -546,6 +546,15 @@ class CtaEngine(BaseEngine):
             return contract.min_volume
         else:
             return None
+    def get_account_position_info(self, strategy: CtaTemplate):
+        
+        account_info = self.main_engine.query_account()
+        position_info = self.main_engine.query_position()
+        if account_info and position_info:
+            return account_info, position_info
+        else:
+            return  None, None 
+
 
     def load_bar(
         self,

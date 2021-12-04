@@ -154,7 +154,7 @@ class CtaTemplate(ABC):
         """
         pass
     @virtual
-    def on_position(self, account):
+    def on_position(self, position):
         """
         账户信息推送
         """
@@ -233,7 +233,7 @@ class CtaTemplate(ABC):
         """
         Return all active orders.
         """
-        return self.cta_engine.get_active_orders() 
+        return self.cta_engine.get_active_orders(self) 
 
     def get_pricetick(self):
         """
@@ -245,6 +245,10 @@ class CtaTemplate(ABC):
         Return min volume of trading contract.
         """
         return self.cta_engine.get_min_volume(self) 
+
+    def get_account_position_info(self):
+
+        return self.cta_engine.get_account_position_info(self) 
 
     def load_bar(
         self,
