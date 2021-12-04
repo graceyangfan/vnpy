@@ -70,6 +70,7 @@ class RLStrategy(CtaTemplate):
         ##use for default 
         self.balance = 0.0
         self.frozen = 0.0 
+        self.available = 0.0 
         self.hold_pos = 0.0 
         self.pos_avgprice = 0.0 
         self.pnl = 0.0 
@@ -102,8 +103,9 @@ class RLStrategy(CtaTemplate):
         ## update Pos Info 
         self.active_orders = self.get_active_orders() 
         frozen_occupy_margin = sum([order.price * abs(order.volume) * self.start_margin_rate for order in self.active_orders])
-        self.total_occupy_margin = frozen_occupy_margin + self.frozen 
-        self.capital = self.balance  + self.total_occupy_margin + self.pnl 
+        self.total_occupy_margin = frozen_occupy_margin + abs(self.hold_pos)*self.pos_avgprice * self.start_margin_rate
+        self.available = self.balance - self.total_occupy_margin -self.frozen
+        self.capital = self.balance  +  self.pnl 
         self.occupy_rate = self.total_occupy_margin / self.capital 
         self.pos_info = np.array([self.occupy_rate,
         abs(self.hold_pos)>self.min_volume,
@@ -140,8 +142,8 @@ class RLStrategy(CtaTemplate):
         self.account = account
 
         if account.accountid == "USDT":
-            self.balance = account.balance
-            self.frozen =  account.frozen 
+            self.balance = account.balance  ##所有资金
+            self.frozen =  account.frozen   ##维系保证金 
 
     def on_position(self, position):
         self.position = position 
@@ -189,7 +191,7 @@ class RLStrategy(CtaTemplate):
         
         if offset == Offset.OPEN:
             ##限制每一笔的最大金额比例
-            trade_balance = self.balance*self.limit_order_margin_rate * trade_ptr
+            trade_balance = self.available*self.limit_order_margin_rate * trade_ptr
             self.min_trade_in_gateway= self.min_volume * self.last_price /self.MarginLevel 
             trade_price = round_to(self.last_price,self.pricetick)
             trade_volume = round_to(trade_balance * self.MarginLevel /trade_price,self.min_volume)
