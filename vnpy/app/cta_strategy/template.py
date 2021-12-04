@@ -147,6 +147,18 @@ class CtaTemplate(ABC):
         Callback of stop order update.
         """
         pass
+    @virtual
+    def on_account(self, account):
+        """
+        账户信息推送
+        """
+        pass
+    @virtual
+    def on_position(self, account):
+        """
+        账户信息推送
+        """
+        pass
 
     def buy(self, price: float, volume: float, stop: bool = False, lock: bool = False):
         """
@@ -217,12 +229,22 @@ class CtaTemplate(ABC):
         Return whether the cta_engine is backtesting or live trading.
         """
         return self.cta_engine.get_engine_type()
+    def get_active_orders(self):
+        """
+        Return all active orders.
+        """
+        return self.cta_engine.get_active_orders() 
 
     def get_pricetick(self):
         """
         Return pricetick data of trading contract.
         """
         return self.cta_engine.get_pricetick(self)
+    def get_min_volume(self):
+        """
+        Return min volume of trading contract.
+        """
+        return self.cta_engine.get_min_volume(self) 
 
     def load_bar(
         self,

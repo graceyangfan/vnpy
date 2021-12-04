@@ -52,7 +52,13 @@ from .base import (
     STOPORDER_PREFIX
 )
 from .template import CtaTemplate
-
+from vnpy.trader.event import (
+    EVENT_TICK, 
+    EVENT_ORDER,
+     EVENT_TRADE, 
+     EVENT_POSITION, 
+     EVENT_ACCOUNT
+)
 
 STOP_STATUS_MAP = {
     Status.SUBMITTING: StopOrderStatus.WAITING,
@@ -118,7 +124,17 @@ class CtaEngine(BaseEngine):
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
         self.event_engine.register(EVENT_POSITION, self.process_position_event)
-
+        self.event_engine.register(EVENT_ACCOUNT, self.process_account_event)
+    
+    def process_account_event(self,event: Event):
+        """
+        收到账户事件推送
+        """
+        account = event.data
+        for strategy_name in self.strategies.keys():
+            strategy = self.strategies[strategy_name]    
+             #if strategy.inited:        
+            self.call_strategy_func(strategy, strategy.on_account, account)
     def process_tick_event(self, event: Event):
         """"""
         tick = event.data
@@ -211,8 +227,15 @@ class CtaEngine(BaseEngine):
     def process_position_event(self, event: Event):
         """"""
         position = event.data
-
         self.offset_converter.update_position(position)
+
+        ##传递到strategy里面
+        strategies = self.symbol_strategy_map[position.vt_symbol]
+        if not strategies:
+            return
+        for strategy in strategies:
+            # if strategy.inited:    
+            self.call_strategy_func(strategy, strategy.on_position, position)
 
     def check_stop_order(self, tick: TickData):
         """"""
@@ -497,6 +520,12 @@ class CtaEngine(BaseEngine):
         """"""
         return self.engine_type
 
+    def get_active_orders(self, strategy: CtaTemplate):
+        
+        vt_orderids = self.strategy_orderid_map[strategy.strategy_name]
+
+        return vt_orderids 
+        
     def get_pricetick(self, strategy: CtaTemplate):
         """
         Return contract pricetick data.
@@ -505,6 +534,16 @@ class CtaEngine(BaseEngine):
 
         if contract:
             return contract.pricetick
+        else:
+            return None
+    def get_min_volume(self, strategy: CtaTemplate):
+        """
+        Return contract min volume data.
+        """
+        contract = self.main_engine.get_contract(strategy.vt_symbol)
+
+        if contract:
+            return contract.min_volume
         else:
             return None
 
