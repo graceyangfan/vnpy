@@ -72,6 +72,7 @@ class RLStrategy(CtaTemplate):
         self.frozen = 0.0 
         self.hold_pos = 0.0 
         self.pos_avgprice = 0.0 
+        self.pnl = 0.0 
 
         ##初始化数据
         self.observer = Observer(self.state_dim,self.windows_size)
@@ -102,7 +103,7 @@ class RLStrategy(CtaTemplate):
         self.active_orders = self.get_active_orders() 
         frozen_occupy_margin = sum([order.price * abs(order.volume) * self.start_margin_rate for order in self.active_orders])
         self.total_occupy_margin = frozen_occupy_margin + self.frozen 
-        self.capital = self.balance  + self.total_occupy_margin
+        self.capital = self.balance  + self.total_occupy_margin + self.pnl 
         self.occupy_rate = self.total_occupy_margin / self.capital 
         self.pos_info = np.array([self.occupy_rate,
         abs(self.hold_pos)>self.min_volume,
@@ -145,12 +146,12 @@ class RLStrategy(CtaTemplate):
     def on_position(self, position):
         self.position = position 
         self.hold_pos = position.volume 
+        self.pnl = position.pnl 
         if abs(self.hold_pos) <self.min_volume:
             self.pos_avgprice = self.last_price
         else:
             self.pos_avgprice = position.price  
-        print(self.hold_pos)
-        print(self.pos_avgprice)
+
     def create_order(self,action):
         direction = None
         offset = None 
@@ -177,7 +178,7 @@ class RLStrategy(CtaTemplate):
             else:
                 direction = Direction.SHORT
                 offset = Offset.OPEN 
-            trade_ptr = abs(action) 
+        trade_ptr = abs(action) 
 
         ##检查当前中保证金占用率,是否超过限制，可平仓不可开仓
         if self.occupy_rate > self.limit_total_margin_rate:
