@@ -1,0 +1,7 @@
+{
+    "highfre": {
+        "class_name": "HighFrequencyStrategy",
+        "vt_symbol": "BTCUSDT.BINANCE",
+        "setting": {}
+    }
+}
