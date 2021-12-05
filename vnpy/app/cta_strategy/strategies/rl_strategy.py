@@ -111,8 +111,6 @@ class RLStrategy(CtaTemplate):
             return
         ## update Pos Info 
         self.active_orders = self.get_active_orders() 
-        for order in self.active_orders:
-            print(order)
         frozen_occupy_margin = sum([order.price * abs(order.volume) * self.start_margin_rate for order in self.active_orders])
         self.total_occupy_margin = frozen_occupy_margin + abs(self.hold_pos)*self.pos_avgprice * self.start_margin_rate
         self.available = self.balance - self.total_occupy_margin -self.frozen
@@ -173,6 +171,7 @@ class RLStrategy(CtaTemplate):
     def create_order(self,action):
         direction = None
         offset = None 
+
         if abs(self.hold_pos) > self.min_volume:
             if self.hold_pos > 0: ##多仓 
                 if action > 0:
@@ -222,6 +221,16 @@ class RLStrategy(CtaTemplate):
             if trade_volume < self.min_volume:
                 #self.output("trade volume is not enough to  close a order")
                 return None 
+        if offset == Offset.OPEN:
+            if direction == Direction.LONG:
+                self.write_log("开多:{},价格:{}".format(trade_volume,trade_price))
+            else:
+                self.write_log("开空:{},价格:{}".format(trade_volume,trade_price))
+        elif offset == Offset.CLOSE:
+            if direction == Direction.SHORT:
+                self.write_log("平多:{},价格:{}".format(trade_volume,trade_price))
+            else:
+                self.write_log("平空:{},价格:{}".format(trade_volume,trade_price))
 
         return self.send_order(
             direction,
