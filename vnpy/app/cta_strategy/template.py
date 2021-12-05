@@ -233,7 +233,7 @@ class CtaTemplate(ABC):
         """
         Return all active orders.
         """
-        return self.cta_engine.get_active_orders(self) 
+        return self.cta_engine.get_active_orders() 
 
     def get_pricetick(self):
         """

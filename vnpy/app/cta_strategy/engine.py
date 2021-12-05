@@ -520,9 +520,9 @@ class CtaEngine(BaseEngine):
         """"""
         return self.engine_type
 
-    def get_active_orders(self, strategy: CtaTemplate):
+    def get_active_orders(self):
         
-        vt_orderids = self.strategy_orderid_map[strategy.strategy_name]
+        vt_orderids = self.main_engine.engines['oms'].active_orders  
 
         return vt_orderids 
         
