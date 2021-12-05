@@ -110,7 +110,8 @@ class RLStrategy(CtaTemplate):
         if not self.position_ready:
             return
         ## update Pos Info 
-        self.active_orders = self.get_active_orders() 
+        self.active_orders = self.get_active_orders().values()
+
         frozen_occupy_margin = sum([order.price * abs(order.volume) * self.start_margin_rate for order in self.active_orders])
         self.total_occupy_margin = frozen_occupy_margin + abs(self.hold_pos)*self.pos_avgprice * self.start_margin_rate
         self.available = self.balance - self.total_occupy_margin -self.frozen
@@ -136,8 +137,6 @@ class RLStrategy(CtaTemplate):
         ## take action 
         self.create_order(action[0])
         self.put_event() 
-
-
     def on_trade(self, trade: TradeData):
         pass 
 
@@ -223,14 +222,15 @@ class RLStrategy(CtaTemplate):
                 return None 
         if offset == Offset.OPEN:
             if direction == Direction.LONG:
-                self.write_log("开多:{},价格:{}".format(trade_volume,trade_price))
-            else:
-                self.write_log("开空:{},价格:{}".format(trade_volume,trade_price))
+                self.write_log(f"开多{trade_volume}@{trade_price}")
+            elif direction == Direction.SHORT:
+                self.write_log(f"开空{trade_volume}@{trade_price}")
         elif offset == Offset.CLOSE:
-            if direction == Direction.SHORT:
-                self.write_log("平多:{},价格:{}".format(trade_volume,trade_price))
-            else:
-                self.write_log("平空:{},价格:{}".format(trade_volume,trade_price))
+            if  direction == Direction.LONG:
+                self.write_log(f"平空{trade_volume}@{trade_price}")
+            elif direction == Direction.SHORT:
+                self.write_log(f"平多{trade_volume}@{trade_price}")
+
 
         return self.send_order(
             direction,
@@ -238,5 +238,4 @@ class RLStrategy(CtaTemplate):
             trade_price,
             abs(trade_volume),
             False,
-            False
-        )
+            False)
