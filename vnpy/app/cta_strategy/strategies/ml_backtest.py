@@ -27,7 +27,7 @@ class MLStrategy(CtaTemplate):
     sma_window = 10 
     profit_stop_rate = 1.0
     loss_stop_rate = -0.3
-    indicator_windows_list= [5,10,20,40]
+    indicator_windows_list= [5,10,20,30,40]
     parameters = [ 
         "limit_total_margin_rate",
         "available_change_percent",
