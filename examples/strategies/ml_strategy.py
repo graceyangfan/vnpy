@@ -43,7 +43,9 @@ class MLStrategy(CtaTemplate):
         self.MarginLevel = setting["MarginLevel"] 
         self.indicator_windows_list = setting["indicator_windows_list"] 
         self.start_margin_rate = 1.0/self.MarginLevel 
-
+        self.capital = 100 
+        self.init_capital = setting['init_capital'] 
+        self.capital = self.init_capital
         self.balance = 1e-3
         self.frozen = 1e-3
         self.available = 1e-3
